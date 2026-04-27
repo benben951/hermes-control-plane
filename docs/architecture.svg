@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f6feb"/>
+      <stop offset="100%" stop-color="#388bfd"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#238636"/>
+      <stop offset="100%" stop-color="#3fb950"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d29922"/>
+      <stop offset="100%" stop-color="#e3b341"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#da3633"/>
+      <stop offset="100%" stop-color="#f85149"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b9aaa"/>
+      <stop offset="100%" stop-color="#39d2c0"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#484f58"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#388bfd"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3fb950"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="680" rx="12" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="450" y="38" text-anchor="middle" fill="#e6edf3" font-size="18" font-weight="700" letter-spacing="0.5">
+    Hermes Control Plane — Architecture
+  </text>
+  <line x1="300" y1="48" x2="600" y2="48" stroke="#30363d" stroke-width="1"/>
+
+  <!-- ═══════════ FEISHU ═══════════ -->
+  <g filter="url(#shadow)">
+    <rect x="325" y="68" width="250" height="48" rx="10" fill="url(#blue)"/>
+    <text x="450" y="88" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">💬 Feishu (Lark) Bot</text>
+    <text x="450" y="104" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-size="10">WebSocket Mode — No Tunnel Needed</text>
+  </g>
+
+  <!-- Arrow: Feishu → Classifier -->
+  <line x1="450" y1="116" x2="450" y2="145" stroke="#484f58" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ═══════════ CLASSIFIER ═══════════ -->
+  <g filter="url(#shadow)">
+    <rect x="275" y="148" width="350" height="48" rx="10" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="450" y="168" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">🧠 LLM Classifier</text>
+    <text x="450" y="184" text-anchor="middle" fill="#8b949e" font-size="10">GPT-4o-mini — Intent + Type in 1 API Call (~2s)</text>
+  </g>
+
+  <!-- Arrow: Classifier → split -->
+  <line x1="450" y1="196" x2="450" y2="218" stroke="#484f58" stroke-width="1.5"/>
+  <!-- Split lines -->
+  <line x1="450" y1="218" x2="200" y2="218" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="450" y1="218" x2="700" y2="218" stroke="#388bfd" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="200" y1="218" x2="200" y2="238" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+  <line x1="700" y1="218" x2="700" y2="238" stroke="#388bfd" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+
+  <!-- Labels -->
+  <text x="310" y="213" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">chat</text>
+  <text x="590" y="213" text-anchor="middle" fill="#388bfd" font-size="10" font-weight="600">task</text>
+
+  <!-- ═══════════ CHAT (left) ═══════════ -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="242" width="200" height="44" rx="8" fill="url(#green)"/>
+    <text x="200" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">⚡ Quick Reply</text>
+    <text x="200" y="276" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="9">GPT-4o Direct — ~3s</text>
+  </g>
+
+  <!-- Arrow: Chat → Feishu (curved left) -->
+  <path d="M100,264 Q50,264 50,180 Q50,92 325,92" fill="none" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowGreen)"/>
+  <text x="38" y="180" fill="#3fb950" font-size="9" transform="rotate(-90,38,180)">reply</text>
+
+  <!-- ═══════════ ROUTER (right) ═══════════ -->
+  <g filter="url(#shadow)">
+    <rect x="600" y="242" width="200" height="44" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="700" y="260" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="600">🔀 Smart Router</text>
+    <text x="700" y="276" text-anchor="middle" fill="#8b949e" font-size="9">choose_pipeline(intent)</text>
+  </g>
+
+  <!-- Arrow: Router → pipelines -->
+  <line x1="700" y1="286" x2="700" y2="310" stroke="#484f58" stroke-width="1.5"/>
+  <line x1="170" y1="310" x2="780" y2="310" stroke="#484f58" stroke-width="1"/>
+  <!-- 4 vertical drops -->
+  <line x1="170" y1="310" x2="170" y2="335" stroke="#484f58" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="380" y1="310" x2="380" y2="335" stroke="#484f58" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="580" y1="310" x2="580" y2="335" stroke="#484f58" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="780" y1="310" x2="780" y2="335" stroke="#484f58" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Intent labels on arrows -->
+  <text x="170" y="326" text-anchor="middle" fill="#388bfd" font-size="8">implement (complex)</text>
+  <text x="380" y="326" text-anchor="middle" fill="#e3b341" font-size="8">fix / small change</text>
+  <text x="580" y="326" text-anchor="middle" fill="#a78bfa" font-size="8">review / audit</text>
+  <text x="780" y="326" text-anchor="middle" fill="#8b949e" font-size="8">health check</text>
+
+  <!-- ═══════════ PIPELINES ═══════════ -->
+
+  <!-- Pipeline 1: Default -->
+  <g filter="url(#shadow)">
+    <rect x="75" y="340" width="190" height="150" rx="10" fill="#0d1117" stroke="#388bfd" stroke-width="1.5"/>
+    <text x="170" y="362" text-anchor="middle" fill="#388bfd" font-size="11" font-weight="700">Default Pipeline</text>
+    <rect x="95" y="375" width="150" height="28" rx="6" fill="url(#purple)"/>
+    <text x="170" y="394" text-anchor="middle" fill="#fff" font-size="10">🧠 Claude (Plan)</text>
+    <text x="170" y="416" text-anchor="middle" fill="#484f58" font-size="14">↓</text>
+    <rect x="95" y="422" width="150" height="28" rx="6" fill="url(#orange)"/>
+    <text x="170" y="441" text-anchor="middle" fill="#fff" font-size="10">⚡ Codex (Exec)</text>
+    <text x="170" y="463" text-anchor="middle" fill="#484f58" font-size="14">↓</text>
+    <rect x="95" y="468" width="150" height="28" rx="6" fill="url(#purple)"/>
+    <text x="170" y="487" text-anchor="middle" fill="#fff" font-size="10">🔍 Claude (Review)</text>
+  </g>
+
+  <!-- Pipeline 2: Fast Implement -->
+  <g filter="url(#shadow)">
+    <rect x="285" y="340" width="190" height="150" rx="10" fill="#0d1117" stroke="#e3b341" stroke-width="1.5"/>
+    <text x="380" y="362" text-anchor="middle" fill="#e3b341" font-size="11" font-weight="700">Fast Implement</text>
+    <rect x="305" y="405" width="150" height="28" rx="6" fill="url(#orange)"/>
+    <text x="380" y="424" text-anchor="middle" fill="#fff" font-size="10">⚡ Codex (Exec)</text>
+    <text x="380" y="452" text-anchor="middle" fill="#8b949e" font-size="9">Single step</text>
+    <text x="380" y="466" text-anchor="middle" fill="#8b949e" font-size="9">Bug fixes, small changes</text>
+  </g>
+
+  <!-- Pipeline 3: Review Only -->
+  <g filter="url(#shadow)">
+    <rect x="485" y="340" width="190" height="150" rx="10" fill="#0d1117" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="580" y="362" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">Review Only</text>
+    <rect x="505" y="405" width="150" height="28" rx="6" fill="url(#purple)"/>
+    <text x="580" y="424" text-anchor="middle" fill="#fff" font-size="10">🔍 Claude (Review)</text>
+    <text x="580" y="452" text-anchor="middle" fill="#8b949e" font-size="9">Code audit</text>
+    <text x="580" y="466" text-anchor="middle" fill="#8b949e" font-size="9">No modifications</text>
+  </g>
+
+  <!-- Pipeline 4: Smoke -->
+  <g filter="url(#shadow)">
+    <rect x="685" y="340" width="190" height="150" rx="10" fill="#0d1117" stroke="#484f58" stroke-width="1.5"/>
+    <text x="780" y="362" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="700">Smoke Test</text>
+    <rect x="705" y="393" width="150" height="22" rx="6" fill="url(#purple)" opacity="0.6"/>
+    <text x="780" y="409" text-anchor="middle" fill="#fff" font-size="9">Claude</text>
+    <text x="780" y="424" text-anchor="middle" fill="#484f58" font-size="10">↓</text>
+    <rect x="705" y="430" width="150" height="22" rx="6" fill="url(#purple)" opacity="0.6"/>
+    <text x="780" y="446" text-anchor="middle" fill="#fff" font-size="9">Claude</text>
+    <text x="780" y="461" text-anchor="middle" fill="#484f58" font-size="10">↓</text>
+    <rect x="705" y="467" width="150" height="22" rx="6" fill="url(#purple)" opacity="0.6"/>
+    <text x="780" y="483" text-anchor="middle" fill="#fff" font-size="9">Claude</text>
+  </g>
+
+  <!-- ═══════════ RESULTS ═══════════ -->
+  <!-- All pipelines → Results -->
+  <line x1="170" y1="490" x2="170" y2="520" stroke="#484f58" stroke-width="1"/>
+  <line x1="380" y1="490" x2="380" y2="520" stroke="#484f58" stroke-width="1"/>
+  <line x1="580" y1="490" x2="580" y2="520" stroke="#484f58" stroke-width="1"/>
+  <line x1="780" y1="490" x2="780" y2="520" stroke="#484f58" stroke-width="1"/>
+  <line x1="170" y1="520" x2="780" y2="520" stroke="#484f58" stroke-width="1.5"/>
+  <line x1="450" y1="520" x2="450" y2="548" stroke="#484f58" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="325" y="552" width="250" height="40" rx="10" fill="url(#green)"/>
+    <text x="450" y="577" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">📤 Results → Feishu Reply</text>
+  </g>
+
+  <!-- ═══════════ FEATURE BADGES ═══════════ -->
+  <g transform="translate(100, 615)">
+    <rect width="130" height="26" rx="13" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="65" y="17" text-anchor="middle" fill="#8b949e" font-size="10">🔗 WebSocket</text>
+  </g>
+  <g transform="translate(250, 615)">
+    <rect width="140" height="26" rx="13" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="70" y="17" text-anchor="middle" fill="#8b949e" font-size="10">📦 Zero Dependencies</text>
+  </g>
+  <g transform="translate(410, 615)">
+    <rect width="120" height="26" rx="13" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="60" y="17" text-anchor="middle" fill="#8b949e" font-size="10">🔧 MCP Tools</text>
+  </g>
+  <g transform="translate(550, 615)">
+    <rect width="100" height="26" rx="13" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="50" y="17" text-anchor="middle" fill="#8b949e" font-size="10">🐧 WSL2</text>
+  </g>
+  <g transform="translate(670, 615)">
+    <rect width="120" height="26" rx="13" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="60" y="17" text-anchor="middle" fill="#8b949e" font-size="10">🐕 Auto Restart</text>
+  </g>
+
+  <!-- Watermark -->
+  <text x="880" y="668" text-anchor="end" fill="#21262d" font-size="9">github.com/benben951/hermes-control-plane</text>
+</svg>
