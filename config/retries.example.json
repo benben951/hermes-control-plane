@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "default": {
+    "max_attempts": 2,
+    "retry_on": [
+      "artifact_missing",
+      "artifact_invalid_json",
+      "timeout"
+    ]
+  },
+  "by_stage": {
+    "planner": {
+      "max_attempts": 2
+    },
+    "executor": {
+      "max_attempts": 1
+    },
+    "reviewer": {
+      "max_attempts": 2
+    }
+  },
+  "fallbacks": [
+    {
+      "if_stage": "planner",
+      "from_agent": "claude",
+      "to_agent": "codex"
+    }
+  ]
+}

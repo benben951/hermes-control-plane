@@ -1,0 +1,24 @@
+[feishu]
+mode = "webhook"
+enabled = false
+
+[feishu.webhook]
+url_env = "FEISHU_WEBHOOK_URL"
+secret_env = "FEISHU_WEBHOOK_SECRET"
+message_prefix = "[Hermes]"
+
+[feishu.app]
+app_id_env = "FEISHU_APP_ID"
+app_secret_env = "FEISHU_APP_SECRET"
+verification_token_env = "FEISHU_VERIFICATION_TOKEN"
+encrypt_key_env = "FEISHU_ENCRYPT_KEY"
+listen_host = "127.0.0.1"
+listen_port = 8787
+
+[feishu.events]
+notify_on = [
+  "run_started",
+  "run_completed",
+  "run_failed",
+  "review_needs_work"
+]

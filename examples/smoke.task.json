@@ -1,0 +1,14 @@
+{
+  "id": "smoke-test",
+  "intent": "verify",
+  "goal": "Run a no-op Hermes smoke test. Do not modify project files. Only produce the required stage artifacts and report whether the control chain is functioning.",
+  "cwd": "/home/jie13/workspace/hermes-control-plane",
+  "constraints": [
+    "Do not edit arbitrary files in the repo.",
+    "Only write the requested stage artifact files."
+  ],
+  "context_files": [],
+  "notes": [
+    "This is a connectivity check for the WSL2-native Hermes CLI."
+  ]
+}

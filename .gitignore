@@ -1,0 +1,30 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.hermes/
+runs/
+artifacts/
+config/hermes.local.toml
+*.env
+# Sensitive configs (never commit)
+.env.*
+# Hermes runtime data
+# OS files
+.DS_Store
+Thumbs.db
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+# egg-info (build artifact)
+src/*.egg-info/

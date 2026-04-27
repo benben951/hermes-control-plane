@@ -1,0 +1,82 @@
+[hermes]
+default_profile = "wsl2"
+runs_root = "/home/<YOUR_USERNAME>/.hermes/runs"
+shared_context_files = []
+context_file_char_limit = 8000
+
+[pipelines.default]
+planner = "claude"
+executor = "codex"
+reviewer = "claude"
+
+[pipelines.smoke]
+planner = "claude"
+executor = "claude"
+reviewer = "claude"
+
+[pipelines.fast_implement]
+executor = "codex"
+
+[pipelines.review_only]
+reviewer = "claude"
+
+[profiles.windows.codex]
+enabled = true
+command = ["cmd.exe", "/d", "/c", "C:\\Users\\<YOUR_USERNAME>\\AppData\\Roaming\\npm\\codex.cmd", "exec", "--skip-git-repo-check", "-"]
+append_prompt_as = "stdin"
+timeout_seconds = 3600
+
+[profiles.windows.claude]
+enabled = true
+command = ["C:\\Users\\<YOUR_USERNAME>\\.local\\bin\\claude.exe", "--bare", "-p", "--output-format", "json", "--permission-mode", "acceptEdits"]
+append_prompt_as = "arg"
+timeout_seconds = 3600
+artifact_transport = "stdout_json"
+
+[profiles.wsl2.codex]
+enabled = true
+command = ["codex", "exec", "--skip-git-repo-check", "-"]
+append_prompt_as = "stdin"
+timeout_seconds = 3600
+doctor_command = ["codex", "--version"]
+
+[profiles.wsl2.claude]
+enabled = true
+command = ["claude", "--bare", "-p", "--output-format", "json", "--permission-mode", "acceptEdits"]
+append_prompt_as = "arg"
+timeout_seconds = 3600
+doctor_command = ["claude", "--version"]
+artifact_transport = "stdout_json"
+
+[profiles.wsl_mixed.codex]
+enabled = true
+command = ["codex", "exec", "--skip-git-repo-check", "-"]
+append_prompt_as = "stdin"
+timeout_seconds = 3600
+doctor_command = ["codex", "--version"]
+
+[profiles.wsl_mixed.claude]
+enabled = true
+command = ["/mnt/c/Users/<YOUR_USERNAME>/.local/bin/claude.exe", "--bare", "-p", "--output-format", "json", "--permission-mode", "acceptEdits"]
+append_prompt_as = "arg"
+timeout_seconds = 3600
+doctor_command = ["/mnt/c/Users/<YOUR_USERNAME>/.local/bin/claude.exe", "--version"]
+artifact_transport = "stdout_json"
+run_cwd = "/mnt/c/Users/<YOUR_USERNAME>"
+
+[feishu]
+mode = "webhook"
+enabled = false
+
+[feishu.webhook]
+url_env = "FEISHU_WEBHOOK_URL"
+secret_env = "FEISHU_WEBHOOK_SECRET"
+message_prefix = "[Hermes]"
+
+[feishu.events]
+notify_on = [
+  "run_started",
+  "run_completed",
+  "run_failed",
+  "review_needs_work"
+]

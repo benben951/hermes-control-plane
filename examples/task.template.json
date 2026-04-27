@@ -1,0 +1,12 @@
+{
+  "id": "real-task-id",
+  "intent": "implement",
+  "goal": "Describe the real objective here.",
+  "cwd": "/home/jie13/workspace/hermes-control-plane",
+  "constraints": [
+    "Stay inside the declared cwd unless explicitly allowed.",
+    "Write the requested stage artifact JSON."
+  ],
+  "context_files": [],
+  "notes": []
+}

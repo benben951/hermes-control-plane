@@ -1,0 +1,27 @@
+[profiles.windows]
+name = "windows"
+notes = "Bootstrap profile for the current host."
+
+[profiles.windows.codex]
+command = ["cmd.exe", "/d", "/c", "C:\\Users\\jie13\\AppData\\Roaming\\npm\\codex.cmd", "exec", "--skip-git-repo-check", "-"]
+append_prompt_as = "stdin"
+timeout_seconds = 3600
+
+[profiles.windows.claude]
+command = ["C:\\Users\\jie13\\.local\\bin\\claude.exe", "--bare", "-p", "--output-format", "json", "--permission-mode", "acceptEdits"]
+append_prompt_as = "arg"
+timeout_seconds = 3600
+
+[profiles.wsl2]
+name = "wsl2"
+notes = "Target profile once the control plane moves into the Linux filesystem."
+
+[profiles.wsl2.codex]
+command = ["bash", "-lc", "codex exec --skip-git-repo-check -"]
+append_prompt_as = "stdin"
+timeout_seconds = 3600
+
+[profiles.wsl2.claude]
+command = ["bash", "-lc", "claude --bare -p --output-format json --permission-mode acceptEdits"]
+append_prompt_as = "arg"
+timeout_seconds = 3600

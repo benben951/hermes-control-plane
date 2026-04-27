@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "default_pipeline": "standard_change",
+  "pipelines": {
+    "fast_implement": {
+      "stages": ["executor"],
+      "agents": {
+        "executor": "codex"
+      }
+    },
+    "standard_change": {
+      "stages": ["planner", "executor", "reviewer"],
+      "agents": {
+        "planner": "claude",
+        "executor": "codex",
+        "reviewer": "claude"
+      }
+    },
+    "review_only": {
+      "stages": ["reviewer"],
+      "agents": {
+        "reviewer": "claude"
+      }
+    }
+  },
+  "rules": [
+    {
+      "name": "review-intent",
+      "when": {
+        "intent_in": ["review", "audit"]
+      },
+      "pipeline": "review_only"
+    },
+    {
+      "name": "bounded-implementation",
+      "when": {
+        "intent_in": ["implement", "fix"],
+        "goal_matches_any": ["single file", "small change", "minimal edit"]
+      },
+      "pipeline": "fast_implement"
+    }
+  ]
+}
