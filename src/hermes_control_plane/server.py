@@ -21,6 +21,8 @@ import urllib.parse
 from pathlib import Path
 from typing import Any
 
+from .conversation import get_store as _get_conv_store
+
 logger = logging.getLogger(__name__)
 
 
@@ -314,7 +316,39 @@ def _load_shared_context(char_limit: int = 16000) -> str:
     return "\n\n".join(ctx_parts) if ctx_parts else ""
 
 
-def _codex_quick_chat(text: str, codex_cmd: list[str], timeout: int = 60) -> str:
+
+def _build_messages(system_prompt: str, user_text: str, session_id: str = "") -> list[dict[str, str]]:
+    """Build OpenAI-compatible messages array with conversation history."""
+    messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+    
+    # Inject recent conversation history (if available)
+    if session_id:
+        store = _get_conv_store()
+        history = store.get_history(session_id, n=8)
+        if history:
+            messages.extend(history)
+    
+    messages.append({"role": "user", "content": user_text})
+    return messages
+
+
+
+def _build_messages(system_prompt: str, user_text: str, session_id: str = "") -> list[dict[str, str]]:
+    """Build OpenAI-compatible messages array with conversation history."""
+    messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+    
+    # Inject recent conversation history (if available)
+    if session_id:
+        store = _get_conv_store()
+        history = store.get_history(session_id, n=8)
+        if history:
+            messages.extend(history)
+    
+    messages.append({"role": "user", "content": user_text})
+    return messages
+
+
+def _codex_quick_chat(text: str, codex_cmd: list[str], session_id: str = "", timeout: int = 60) -> str:
     """Send a message directly via OpenAI API for fast conversational reply.
     Falls back to Codex CLI if API call fails.
     Returns the reply text, or empty string on failure.
@@ -358,10 +392,7 @@ def _codex_quick_chat(text: str, codex_cmd: list[str], timeout: int = 60) -> str
         client = OpenAI(api_key=api_key, base_url=base_url)
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text},
-            ],
+            messages=_build_messages(system_prompt, text, session_id),
             max_tokens=300,
             timeout=timeout,
         )
@@ -446,6 +477,7 @@ def _run_quick_chat_async(
     text: str,
     sender: "FeishuAppSender | None",
     reply_target: "tuple[str, str] | None",
+    session_id: str = "",
 ) -> None:
     """Run a quick Codex chat in background and reply via Feishu."""
     def _notify(msg: str) -> None:
@@ -457,7 +489,13 @@ def _run_quick_chat_async(
                 logger.warning("Failed to send Feishu notification: %s", exc)
     
     try:
-        reply = _codex_quick_chat(text, codex_cmd)
+        reply = _codex_quick_chat(text, codex_cmd, session_id=session_id)
+        # Save user message and assistant reply to conversation store
+        if session_id:
+            store = _get_conv_store()
+            store.add_message(session_id, "user", text)
+            if reply:
+                store.add_message(session_id, "assistant", reply)
         if reply:
             _notify(reply)
         else:
@@ -474,6 +512,7 @@ def _run_pipeline_async(
     pipeline: str,
     sender: "FeishuAppSender | None",
     reply_target: "tuple[str, str] | None",
+    session_id: str = "",
 ) -> None:
     """Run a Hermes pipeline in a background thread and notify via Feishu."""
     from .runner import run_pipeline
@@ -493,6 +532,12 @@ def _run_pipeline_async(
                 logger.warning("Failed to send Feishu notification: %s", exc)
 
     try:
+        # Save to conversation store
+        if session_id:
+            _get_conv_store().add_message(session_id, "user", task_json.get("goal", ""))
+        # Save to conversation store
+        if session_id:
+            _get_conv_store().add_message(session_id, "user", task_json.get("goal", ""))
         logger.info("Pipeline task starting: goal=%.100s", task_json.get('goal', ''))
         _notify(f"\U0001f680 收到任务，开始执行...\n目标：{task_json.get('goal', '(未指定)')}")
         logger.info("Pipeline notify sent, calling run_pipeline...")
@@ -542,7 +587,7 @@ def _run_pipeline_async(
         task_file.unlink(missing_ok=True)
 
 
-def _build_task_from_text(text: str) -> dict[str, Any]:
+def _build_task_from_text(text: str, session_id: str = "") -> tuple[dict[str, Any], str]:
     """Convert raw Feishu message text into a TaskSpec-compatible dict.
     
     Uses LLM (gpt-4o-mini) to detect intent and classify simultaneously.
@@ -618,6 +663,14 @@ def _build_task_from_text(text: str) -> dict[str, Any]:
         _last_llm_msg_type = None
         _last_llm_msg_text = text
 
+    # Inject conversation context into task notes
+    task_notes = ["Task received via Feishu message"]
+    if session_id:
+        store = _get_conv_store()
+        conv_summary = store.get_summary(session_id)
+        if conv_summary:
+            task_notes.append(f"Recent conversation context:\n{conv_summary}")
+    
     task_dict = {
         "id": f"feishu-{uuid.uuid4().hex[:8]}",
         "intent": intent,
@@ -625,7 +678,7 @@ def _build_task_from_text(text: str) -> dict[str, Any]:
         "cwd": os.path.expanduser("~"),
         "constraints": [],
         "context_files": [],
-        "notes": ["Task received via Feishu message"],
+        "notes": task_notes,
     }
 
     # Use router to select pipeline
@@ -713,23 +766,24 @@ class HermesHandler(http.server.BaseHTTPRequestHandler):
         msg_type = _classify_message(text)
         logger.info("Message classified as: %s", msg_type)
 
+        # Derive session_id from reply_id (user or chat)
+        session_id = reply_id if reply_id else ""
+
         if msg_type == "chat":
             # Quick reply via Claude - no pipeline needed
             codex_cmd = _resolve_codex_cmd(self.config)
             t = threading.Thread(
                 target=_run_quick_chat_async,
-                args=(codex_cmd, text, self.sender, (reply_id, reply_type)),
+                args=(codex_cmd, text, self.sender, (reply_id, reply_type), session_id),
                 daemon=True,
             )
             t.start()
         else:
             # Development task - run full pipeline
-            task_json = _build_task_from_text(text)
-            pipeline = self.config.get("hermes", {}).get("default_pipeline", "default")
-
+            task_json, pipeline = _build_task_from_text(text, session_id=session_id)
             t = threading.Thread(
                 target=_run_pipeline_async,
-                args=(self.config_path, task_json, pipeline, self.sender, (reply_id, reply_type)),
+                args=(self.config_path, task_json, pipeline, self.sender, (reply_id, reply_type), session_id),
                 daemon=True,
             )
             t.start()
@@ -831,27 +885,22 @@ class HermesServer:
             msg_type = _classify_message(text)
             logger.info("Message classified as: %s", msg_type)
 
+            # Derive session_id from reply_id
+            session_id = reply_id if reply_id else ""
+
             if msg_type == "chat":
                 codex_cmd = _resolve_codex_cmd(config)
                 t = threading.Thread(
                     target=_run_quick_chat_async,
-                    args=(codex_cmd, text, sender, (reply_id, reply_type)),
-                    daemon=True,
-                )
-                t.start()
-            if msg_type == "chat":
-                codex_cmd = _resolve_codex_cmd(config)
-                t = threading.Thread(
-                    target=_run_quick_chat_async,
-                    args=(codex_cmd, text, sender, (reply_id, reply_type)),
+                    args=(codex_cmd, text, sender, (reply_id, reply_type), session_id),
                     daemon=True,
                 )
                 t.start()
             else:
-                task_json, pipeline = _build_task_from_text(text)
+                task_json, pipeline = _build_task_from_text(text, session_id=session_id)
                 t = threading.Thread(
                     target=_run_pipeline_async,
-                    args=(config_path, task_json, pipeline, sender, (reply_id, reply_type)),
+                    args=(config_path, task_json, pipeline, sender, (reply_id, reply_type), session_id),
                     daemon=True,
                 )
                 t.start()
