@@ -19,6 +19,38 @@ except ModuleNotFoundError:  # pragma: no cover
 from .feishu import FeishuNotifier, render_run_message
 
 
+def _build_subprocess_env() -> dict[str, str]:
+    """Return an env dict for subprocess calls with proxy + GitHub token injected.
+
+    Codex runs in a non-interactive shell, so ~/.bashrc is not sourced.
+    We explicitly inject HTTP proxy and GITHUB_TOKEN so Codex can access
+    GitHub API, install packages, etc.
+    """
+    env = os.environ.copy()
+    # Proxy — Clash on Windows host, WSL2 mirrored networking
+    proxy = "http://127.0.0.1:7897"
+    env.setdefault("http_proxy", proxy)
+    env.setdefault("https_proxy", proxy)
+    env.setdefault("HTTP_PROXY", proxy)
+    env.setdefault("HTTPS_PROXY", proxy)
+    # GitHub token from bashrc if not already set
+    if not env.get("GITHUB_TOKEN"):
+        # Try to source the token from ~/.bashrc
+        import re as _re
+        try:
+            bashrc = Path.home() / ".bashrc"
+            if bashrc.exists():
+                for line in bashrc.read_text(encoding="utf-8").splitlines():
+                    m = _re.search(r"export\s+GITHUB_TOKEN\s*=\s*[\"']?(\S+)", line)
+                    if m:
+                        env["GITHUB_TOKEN"] = m.group(1)
+                        break
+        except Exception:
+            pass
+    return env
+
+
+
 STAGE_SCHEMAS = {
     "planner": {
         "summary": "string",
@@ -353,7 +385,7 @@ def run_agent(
         text=True,
         capture_output=True,
         timeout=timeout_seconds,
-        env=os.environ.copy(),
+        env=_build_subprocess_env(),
         check=False,
     )
 
@@ -590,7 +622,7 @@ def doctor(config_path: Path, profile_name: str | None) -> dict[str, Any]:
                     text=True,
                     capture_output=True,
                     timeout=15,
-                    env=os.environ.copy(),
+                    env=_build_subprocess_env(),
                     check=False,
                 )
                 doctor_check = {
