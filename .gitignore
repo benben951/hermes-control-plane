@@ -14,6 +14,7 @@ runs/
 artifacts/
 config/hermes.local.toml
 *.env
+*.bak.*
 # Sensitive configs (never commit)
 .env.*
 # Hermes runtime data
