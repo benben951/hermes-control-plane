@@ -21,6 +21,7 @@ import urllib.parse
 from pathlib import Path
 from typing import Any
 
+from .conversation import configure_store as _configure_conv_store
 from .conversation import get_store as _get_conv_store
 
 logger = logging.getLogger(__name__)
@@ -298,6 +299,95 @@ def _classify_message(text: str) -> str:
     if re.search(task_keywords, text, re.IGNORECASE):
         return "task"
     return "chat"
+
+
+def _strip_command_prefix(text: str) -> tuple[str | None, str]:
+    """Return an explicit mobile command and the remaining message text."""
+    match = re.match(r"^\s*/(chat|task|fast|review|status)\b\s*(.*)$", text, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return None, text.strip()
+    return match.group(1).lower(), match.group(2).strip()
+
+
+def _send_feishu_text(
+    sender: "FeishuAppSender | None",
+    reply_target: "tuple[str, str] | None",
+    msg: str,
+) -> None:
+    if not sender or not reply_target:
+        return
+    rid, rtype = reply_target
+    try:
+        sender.send_text(rid, rtype, msg)
+    except Exception as exc:
+        logger.warning("Failed to send Feishu notification: %s", exc)
+
+
+def _dispatch_feishu_text(
+    config_path: Path,
+    config: dict[str, Any],
+    text: str,
+    sender: "FeishuAppSender | None",
+    reply_target: "tuple[str, str] | None",
+    session_id: str = "",
+) -> None:
+    """Route a Feishu text message to quick chat or an execution pipeline."""
+    command, clean_text = _strip_command_prefix(text)
+    clean_text = clean_text or text.strip()
+
+    if command == "status":
+        _send_feishu_text(sender, reply_target, "在线。手机端可用 /chat 问答，/fast 小改动，/task 长任务，/review 复核。")
+        return
+
+    if command == "chat":
+        msg_type = "chat"
+    elif command in {"task", "fast", "review"}:
+        msg_type = "task"
+    else:
+        msg_type = _classify_message(clean_text)
+    logger.info("Message classified as: %s (command=%s)", msg_type, command or "auto")
+
+    if msg_type == "chat":
+        codex_cmd = _resolve_codex_cmd(config)
+        t = threading.Thread(
+            target=_run_quick_chat_async,
+            args=(codex_cmd, clean_text, sender, reply_target, session_id),
+            daemon=True,
+        )
+        t.start()
+        return
+
+    def _prepare_and_run_task() -> None:
+        if command == "fast":
+            task_json = {
+                "id": f"feishu-{uuid.uuid4().hex[:8]}",
+                "intent": "fix",
+                "goal": clean_text,
+                "cwd": os.path.expanduser("~"),
+                "constraints": [],
+                "context_files": [],
+                "notes": ["Task received via Feishu /fast command"],
+            }
+            pipeline = "fast_implement"
+        elif command == "review":
+            task_json = {
+                "id": f"feishu-{uuid.uuid4().hex[:8]}",
+                "intent": "review",
+                "goal": clean_text,
+                "cwd": os.path.expanduser("~"),
+                "constraints": [],
+                "context_files": [],
+                "notes": ["Task received via Feishu /review command"],
+            }
+            pipeline = "review_only"
+        else:
+            task_json, pipeline = _build_task_from_text(clean_text, session_id=session_id)
+        _run_pipeline_async(config_path, task_json, pipeline, sender, reply_target, session_id)
+
+    t = threading.Thread(target=_prepare_and_run_task, daemon=True)
+    t.start()
+
+
 def _load_shared_context(char_limit: int = 16000) -> str:
     """Load shared context files configured in hermes.local.toml."""
     import glob
@@ -535,9 +625,6 @@ def _run_pipeline_async(
         # Save to conversation store
         if session_id:
             _get_conv_store().add_message(session_id, "user", task_json.get("goal", ""))
-        # Save to conversation store
-        if session_id:
-            _get_conv_store().add_message(session_id, "user", task_json.get("goal", ""))
         logger.info("Pipeline task starting: goal=%.100s", task_json.get('goal', ''))
         _notify(f"\U0001f680 收到任务，开始执行...\n目标：{task_json.get('goal', '(未指定)')}")
         logger.info("Pipeline notify sent, calling run_pipeline...")
@@ -579,10 +666,15 @@ def _run_pipeline_async(
             except Exception as e:
                 logger.warning("Failed to parse run_summary: %s", e)
 
+        if session_id:
+            _get_conv_store().add_message(session_id, "assistant", result_msg)
         _notify(result_msg)
     except Exception as exc:
         logger.exception("Pipeline failed: %s", exc)
-        _notify(f"\u274c 任务失败：{exc}")
+        error_msg = f"\u274c 任务失败：{exc}"
+        if session_id:
+            _get_conv_store().add_message(session_id, "assistant", error_msg)
+        _notify(error_msg)
     finally:
         task_file.unlink(missing_ok=True)
 
@@ -762,31 +854,15 @@ class HermesHandler(http.server.BaseHTTPRequestHandler):
 
         logger.info("Message from %s (%s): %.100s", reply_id, chat_type, text)
 
-        # Classify message: quick chat vs development task
-        msg_type = _classify_message(text)
-        logger.info("Message classified as: %s", msg_type)
-
-        # Derive session_id from reply_id (user or chat)
         session_id = reply_id if reply_id else ""
-
-        if msg_type == "chat":
-            # Quick reply via Claude - no pipeline needed
-            codex_cmd = _resolve_codex_cmd(self.config)
-            t = threading.Thread(
-                target=_run_quick_chat_async,
-                args=(codex_cmd, text, self.sender, (reply_id, reply_type), session_id),
-                daemon=True,
-            )
-            t.start()
-        else:
-            # Development task - run full pipeline
-            task_json, pipeline = _build_task_from_text(text, session_id=session_id)
-            t = threading.Thread(
-                target=_run_pipeline_async,
-                args=(self.config_path, task_json, pipeline, self.sender, (reply_id, reply_type), session_id),
-                daemon=True,
-            )
-            t.start()
+        _dispatch_feishu_text(
+            self.config_path,
+            self.config,
+            text,
+            self.sender,
+            (reply_id, reply_type),
+            session_id,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -807,6 +883,14 @@ class HermesServer:
         self.config = config
         self.host = host
         self.port = port
+
+        hermes_cfg = config.get("hermes", {})
+        conv_cfg = hermes_cfg.get("conversation", {})
+        _configure_conv_store(
+            max_sessions=int(conv_cfg.get("max_sessions", 500)),
+            default_max_turns=int(conv_cfg.get("max_turns", 20)),
+            default_max_age=float(conv_cfg.get("max_age_seconds", 24 * 3600)),
+        )
 
         feishu_cfg = config.get("feishu", {})
         app_cfg = feishu_cfg.get("app", {})
@@ -881,29 +965,15 @@ class HermesServer:
 
             logger.info("WS Message from %s (%s): %.100s", reply_id, chat_type, text)
 
-            # Classify and dispatch
-            msg_type = _classify_message(text)
-            logger.info("Message classified as: %s", msg_type)
-
-            # Derive session_id from reply_id
             session_id = reply_id if reply_id else ""
-
-            if msg_type == "chat":
-                codex_cmd = _resolve_codex_cmd(config)
-                t = threading.Thread(
-                    target=_run_quick_chat_async,
-                    args=(codex_cmd, text, sender, (reply_id, reply_type), session_id),
-                    daemon=True,
-                )
-                t.start()
-            else:
-                task_json, pipeline = _build_task_from_text(text, session_id=session_id)
-                t = threading.Thread(
-                    target=_run_pipeline_async,
-                    args=(config_path, task_json, pipeline, sender, (reply_id, reply_type), session_id),
-                    daemon=True,
-                )
-                t.start()
+            _dispatch_feishu_text(
+                config_path,
+                config,
+                text,
+                sender,
+                (reply_id, reply_type),
+                session_id,
+            )
 
         ws_client = FeishuWSClient(
             app_id=app_id,

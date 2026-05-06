@@ -21,6 +21,7 @@
 ## ✨ Features
 
 - **WebSocket Mode** — Direct connection to Feishu cloud, no public tunnel (no ngrok/cloudflared)
+- **Mobile Feishu Commands** — `/chat`, `/fast`, `/task`, `/review`, and `/status` routes for phone-first control
 - **Smart Routing** — GPT-4o-mini classifies intent in one API call, picks the optimal pipeline
 - **4 Pipeline Modes** — Full orchestration, fast implement, review-only, or smoke test
 - **Zero Python Dependencies** — Only stdlib (`http.server`, `json`, `hashlib`, etc.)
@@ -85,6 +86,20 @@ hermes serve --config config/hermes.local.toml --port 8765 --mode websocket
 ```
 
 ## 🔄 Pipelines
+
+### Mobile Feishu Commands
+
+When using Hermes from a phone, prefix messages to choose the route explicitly:
+
+| Prefix | Route | Use case |
+|---|---|---|
+| `/chat` | Quick API chat | Q&A, summaries, translation, planning, resume wording |
+| `/fast` | `fast_implement` | Small code edits, config fixes, quick checks |
+| `/task` | Default pipeline | Multi-step implementation, research plus code, platform work |
+| `/review` | `review_only` | Code review, experiment review, safety checks |
+| `/status` | Health response | Confirm Hermes is online |
+
+See [docs/MOBILE_FEISHU_WORKFLOW.md](docs/MOBILE_FEISHU_WORKFLOW.md) for the phone-first architecture and operational notes.
 
 ### Default Pipeline (Full Orchestration)
 
