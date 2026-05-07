@@ -1,65 +1,74 @@
 # Mobile Feishu Workflow
 
-Hermes can be used as a phone-first control plane through a Feishu bot. The design goal is to make quick conversations fast while still allowing long-running Codex and Claude Code tasks when the user explicitly asks for them.
+Hermes can be used as a phone-first control plane for Codex CLI and Claude Code through a Feishu bot. The default posture is safe: status checks and reviews are easy, while expensive or destructive actions require explicit approval.
 
-## Architecture
+## Command Set
+
+| Command | Purpose |
+| --- | --- |
+| `/chat <message>` | Quick Q&A, summaries, translation, planning, and resume wording. |
+| `/fast <goal>` | Small, bounded implementation through Codex only. |
+| `/task <goal>` | Standard pipeline: Claude plans, Codex executes, Claude reviews. |
+| `/review <goal>` | Claude review-only path for code, experiment, and safety checks. |
+| `/status taac` | Summarize the TAAC best score, active run, and prepared run from local project docs. |
+| `/status kaggle` | Summarize the Nemotron SFT dataset and next LoRA smoke step. |
+| `/status hermes` | Show the latest Hermes run status. |
+| `/handoff` | Return a compact TAAC + Kaggle handoff for continuing work from the phone. |
+| `/tail hermes` | Show recent Hermes logs with volatile access fields redacted. |
+| `/approve <action_id>` | Approve one pending high-risk action from the same Feishu session. |
+
+## Approval Gate
+
+Hermes creates a pending action instead of executing immediately when a message appears to request:
+
+- TAAC platform training submission;
+- model publishing;
+- leaderboard evaluation;
+- Kaggle submission;
+- GitHub write actions such as `git push` or `gh pr create`;
+- destructive filesystem actions;
+- secret, token, cookie, or credential access.
+
+The bot replies with an action id:
 
 ```text
-Phone / Feishu
-  -> Feishu Bot WebSocket
-  -> Hermes server in WSL2
-  -> Message router
-     -> quick chat: direct OpenAI-compatible API call
-     -> fast task: Codex executor only
-     -> review task: Claude reviewer only
-     -> full task: Claude planner -> Codex executor -> Claude reviewer
-  -> Feishu reply
+Action: approve-12345678
+Risk: platform training submission
+Reply /approve approve-12345678 to continue.
 ```
 
-## Command Prefixes
+Only the same Feishu user or chat session can approve that action. Pending actions expire automatically.
 
-Use a prefix when sending messages from Feishu to avoid slow or incorrect intent classification.
+## Recommended Daily Usage
 
-| Prefix | Route | Use case |
-|---|---|---|
-| `/chat` | Quick chat | Q&A, summaries, translation, planning, resume wording, non-tool answers |
-| `/fast` | `fast_implement` | Small code edits, config fixes, quick local checks |
-| `/task` | Default pipeline | Multi-step implementation, research plus code, platform work |
-| `/review` | `review_only` | Code review, experiment review, safety checks |
-| `/status` | Health response | Confirm the bot is online and list supported prefixes |
-
-Examples:
+Start with status:
 
 ```text
-/chat 帮我把今天的工作整理成简历 bullet
-/fast 修一下 README 里的命令说明
-/task 检查 TAAC 新实验结果并更新实验文档
-/review 复核这次 Kaggle notebook 有没有数据泄漏
-/status
+/status taac
+/status kaggle
 ```
 
-## Runtime Layout
+Ask for a safe review before spending resources:
 
-Recommended local layout:
+```text
+/review Check whether TAAC r1-008 is ready to submit. Do not submit it.
+```
 
-- Hermes server: WSL2 Linux filesystem, for example `/home/<user>/workspace/hermes-control-plane`
-- Hermes Python environment: project-local `.venv`
-- Watchdog: WSL shell script that restarts Hermes if it crashes
-- Codex: WSL-native command when possible
-- Claude Code: either WSL-native command or Windows executable through `/mnt/c/...`
+Prepare work without executing the risky final step:
 
-When Claude Code is invoked from WSL through a Windows executable path, long tasks may be slower because the call crosses the WSL/Windows boundary. Keep quick phone messages on `/chat` and reserve `/task` for work that truly needs tools.
+```text
+/task Prepare the TAAC r1-008 submission checklist and update docs if needed. Do not submit platform training.
+```
 
-## Performance Notes
+If you really want to execute a gated action, approve the returned id:
 
-- `/chat` avoids the full multi-agent pipeline and should be used for ordinary conversation.
-- `/fast` bypasses planning and review for small implementation tasks.
-- `/task` can be slow because it may run planner, executor, and reviewer stages.
-- The WebSocket handler dispatches task preparation to a background thread so incoming Feishu events are not blocked by task analysis.
-- Shared context files are useful but can increase latency; keep them compact and factual.
+```text
+/approve approve-12345678
+```
 
-## Security Notes
+## Privacy Rules
 
-- Do not commit `config/hermes.local.toml`, app secrets, API keys, cookies, Codex auth files, or historical memory files.
-- Store secrets in local config files or environment variables only.
-- Rotate any credential that was pasted into chat, committed, logged, or stored in old memory files.
+- Do not paste API keys, cookies, or account passwords into Feishu.
+- Keep `config/hermes.local.toml`, Codex auth files, Claude settings, browser cookies, and secret stores out of git.
+- Use `/tail hermes` instead of raw log screenshots; Hermes redacts common volatile access fields.
+- Prefer `/review` for platform and leaderboard decisions, then approve only after the review is acceptable.

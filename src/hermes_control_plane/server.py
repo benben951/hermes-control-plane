@@ -23,6 +23,7 @@ from typing import Any
 
 from .conversation import configure_store as _configure_conv_store
 from .conversation import get_store as _get_conv_store
+from . import mobile_commands
 
 logger = logging.getLogger(__name__)
 
@@ -303,10 +304,10 @@ def _classify_message(text: str) -> str:
 
 def _strip_command_prefix(text: str) -> tuple[str | None, str]:
     """Return an explicit mobile command and the remaining message text."""
-    match = re.match(r"^\s*/(chat|task|fast|review|status)\b\s*(.*)$", text, re.IGNORECASE | re.DOTALL)
-    if not match:
+    command = mobile_commands.parse_mobile_command(text)
+    if not command:
         return None, text.strip()
-    return match.group(1).lower(), match.group(2).strip()
+    return command.kind, command.arg
 
 
 def _send_feishu_text(
@@ -332,12 +333,50 @@ def _dispatch_feishu_text(
     session_id: str = "",
 ) -> None:
     """Route a Feishu text message to quick chat or an execution pipeline."""
-    command, clean_text = _strip_command_prefix(text)
+    parsed_command = mobile_commands.parse_mobile_command(text)
+    command = parsed_command.kind if parsed_command else None
+    clean_text = parsed_command.arg if parsed_command else text.strip()
     clean_text = clean_text or text.strip()
 
     if command == "status":
-        _send_feishu_text(sender, reply_target, "在线。手机端可用 /chat 问答，/fast 小改动，/task 长任务，/review 复核。")
+        _send_feishu_text(sender, reply_target, mobile_commands.render_status(clean_text, config))
         return
+
+    if command == "handoff":
+        _send_feishu_text(sender, reply_target, mobile_commands.render_handoff())
+        return
+
+    if command == "tail":
+        _send_feishu_text(sender, reply_target, mobile_commands.render_tail(clean_text, config))
+        return
+
+    if command == "approve":
+        action = mobile_commands.get_pending_store().pop(clean_text, session_id)
+        if not action:
+            _send_feishu_text(sender, reply_target, "没有找到可批准的 action，或它已经过期。")
+            return
+        _send_feishu_text(sender, reply_target, f"已批准 {action.action_id}，开始执行。")
+        clean_text = action.text
+        approved_command = mobile_commands.parse_mobile_command(clean_text)
+        if approved_command and approved_command.kind in {"task", "fast", "review"}:
+            command = approved_command.kind
+            clean_text = approved_command.arg or clean_text
+        else:
+            command = "task"
+        risk_approved = True
+    else:
+        risk_approved = False
+        risk = mobile_commands.detect_high_risk(clean_text)
+        if risk:
+            action = mobile_commands.get_pending_store().create(session_id, clean_text, risk)
+            _send_feishu_text(sender, reply_target, mobile_commands.format_pending_action(action))
+            return
+
+    if command is None:
+        pending = mobile_commands.get_pending_store().list_for_session(session_id)
+        if pending and clean_text.lower() in {"approve", "同意", "确认", "继续"}:
+            _send_feishu_text(sender, reply_target, f"请使用完整命令：/approve {pending[-1].action_id}")
+            return
 
     if command == "chat":
         msg_type = "chat"
@@ -382,6 +421,8 @@ def _dispatch_feishu_text(
             pipeline = "review_only"
         else:
             task_json, pipeline = _build_task_from_text(clean_text, session_id=session_id)
+        if risk_approved:
+            task_json["_record_user_message"] = False
         _run_pipeline_async(config_path, task_json, pipeline, sender, reply_target, session_id)
 
     t = threading.Thread(target=_prepare_and_run_task, daemon=True)
@@ -607,6 +648,9 @@ def _run_pipeline_async(
     """Run a Hermes pipeline in a background thread and notify via Feishu."""
     from .runner import run_pipeline
 
+    task_json = dict(task_json)
+    record_user_message = bool(task_json.pop("_record_user_message", True))
+
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".task.json", delete=False, encoding="utf-8"
     ) as f:
@@ -623,7 +667,7 @@ def _run_pipeline_async(
 
     try:
         # Save to conversation store
-        if session_id:
+        if session_id and record_user_message:
             _get_conv_store().add_message(session_id, "user", task_json.get("goal", ""))
         logger.info("Pipeline task starting: goal=%.100s", task_json.get('goal', ''))
         _notify(f"\U0001f680 收到任务，开始执行...\n目标：{task_json.get('goal', '(未指定)')}")

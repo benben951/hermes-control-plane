@@ -21,7 +21,8 @@
 ## ✨ Features
 
 - **WebSocket Mode** — Direct connection to Feishu cloud, no public tunnel (no ngrok/cloudflared)
-- **Mobile Feishu Commands** — `/chat`, `/fast`, `/task`, `/review`, and `/status` routes for phone-first control
+- **Mobile Feishu Commands** — `/chat`, `/fast`, `/task`, `/review`, `/status`, `/handoff`, `/tail`, and `/approve` routes for phone-first control
+- **Approval Gate** — high-risk submissions, pushes, destructive file actions, and secret reads are held until explicit mobile approval
 - **Smart Routing** — GPT-4o-mini classifies intent in one API call, picks the optimal pipeline
 - **4 Pipeline Modes** — Full orchestration, fast implement, review-only, or smoke test
 - **Zero Python Dependencies** — Only stdlib (`http.server`, `json`, `hashlib`, etc.)
@@ -97,9 +98,15 @@ When using Hermes from a phone, prefix messages to choose the route explicitly:
 | `/fast` | `fast_implement` | Small code edits, config fixes, quick checks |
 | `/task` | Default pipeline | Multi-step implementation, research plus code, platform work |
 | `/review` | `review_only` | Code review, experiment review, safety checks |
-| `/status` | Health response | Confirm Hermes is online |
+| `/status taac` | Project status | Summarize TAAC best score, active run, and prepared run |
+| `/status kaggle` | Project status | Summarize Nemotron SFT data and next LoRA step |
+| `/handoff` | Project handoff | Compact TAAC + Kaggle mobile handoff |
+| `/tail hermes` | Redacted log tail | Inspect recent Hermes logs without exposing access keys |
+| `/approve <id>` | Approval gate | Release a pending high-risk action |
 
 See [docs/MOBILE_FEISHU_WORKFLOW.md](docs/MOBILE_FEISHU_WORKFLOW.md) for the phone-first architecture and operational notes.
+
+High-risk actions are not executed from a phone message immediately. Hermes creates a pending action and asks for an explicit `/approve <id>` before continuing. This includes TAAC platform training/evaluation, model publishing, Kaggle submissions, GitHub write actions, destructive file actions, and secret/credential access.
 
 ### Default Pipeline (Full Orchestration)
 
