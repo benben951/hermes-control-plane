@@ -1,7 +1,7 @@
 """In-memory conversation history for per-user session tracking.
 
 Each user (identified by open_id or chat_id) maintains a rolling buffer of
-recent messages.  This module is zero-dependency (stdlib only) and thread-safe.
+recent messages. This module is zero-dependency (stdlib only) and thread-safe.
 """
 
 from __future__ import annotations
@@ -15,10 +15,14 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MAX_TURNS = 20
+DEFAULT_MAX_AGE_SECONDS = 24 * 3600.0
+DEFAULT_MAX_SESSIONS = 500
+
 
 @dataclass
 class Message:
-    role: str          # "user" | "assistant"
+    role: str  # "user" | "assistant"
     text: str
     ts: float = field(default_factory=time.time)
 
@@ -32,8 +36,8 @@ class Session:
 
     session_id: str
     messages: list[Message] = field(default_factory=list)
-    max_turns: int = 20       # max messages to keep
-    max_age: float = 3600.0   # expire after 1 hour of inactivity
+    max_turns: int = DEFAULT_MAX_TURNS
+    max_age: float = DEFAULT_MAX_AGE_SECONDS
 
     @property
     def last_activity(self) -> float:
@@ -82,11 +86,37 @@ class Session:
 class ConversationStore:
     """Thread-safe in-memory store for user sessions."""
 
-    def __init__(self, max_sessions: int = 500, default_max_turns: int = 20) -> None:
+    def __init__(
+        self,
+        max_sessions: int = DEFAULT_MAX_SESSIONS,
+        default_max_turns: int = DEFAULT_MAX_TURNS,
+        default_max_age: float = DEFAULT_MAX_AGE_SECONDS,
+    ) -> None:
         self._sessions: OrderedDict[str, Session] = OrderedDict()
         self._lock = threading.Lock()
         self._max_sessions = max_sessions
         self._default_max_turns = default_max_turns
+        self._default_max_age = default_max_age
+
+    def reconfigure(
+        self,
+        *,
+        max_sessions: int | None = None,
+        default_max_turns: int | None = None,
+        default_max_age: float | None = None,
+    ) -> None:
+        with self._lock:
+            if max_sessions is not None:
+                self._max_sessions = max_sessions
+            if default_max_turns is not None:
+                self._default_max_turns = default_max_turns
+            if default_max_age is not None:
+                self._default_max_age = default_max_age
+            for session in self._sessions.values():
+                session.max_turns = self._default_max_turns
+                session.max_age = self._default_max_age
+                session._trim()
+            self._evict_expired()
 
     def get_or_create(self, session_id: str) -> Session:
         with self._lock:
@@ -99,6 +129,7 @@ class ConversationStore:
             session = Session(
                 session_id=session_id,
                 max_turns=self._default_max_turns,
+                max_age=self._default_max_age,
             )
             self._sessions[session_id] = session
             logger.info("New conversation session created: %s", session_id)
@@ -157,8 +188,32 @@ class ConversationStore:
 _store: ConversationStore | None = None
 
 
-def get_store() -> ConversationStore:
+def configure_store(
+    *,
+    max_sessions: int = DEFAULT_MAX_SESSIONS,
+    default_max_turns: int = DEFAULT_MAX_TURNS,
+    default_max_age: float = DEFAULT_MAX_AGE_SECONDS,
+) -> ConversationStore:
     global _store
     if _store is None:
-        _store = ConversationStore()
+        _store = ConversationStore(
+            max_sessions=max_sessions,
+            default_max_turns=default_max_turns,
+            default_max_age=default_max_age,
+        )
+    else:
+        _store.reconfigure(
+            max_sessions=max_sessions,
+            default_max_turns=default_max_turns,
+            default_max_age=default_max_age,
+        )
     return _store
+
+
+def get_store() -> ConversationStore:
+    return configure_store()
+
+
+def reset_store() -> None:
+    global _store
+    _store = None
