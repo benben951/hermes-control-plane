@@ -4,7 +4,7 @@
     <strong>Route tasks across OpenAI Codex CLI + Anthropic Claude Code via Feishu Bot</strong>
   </p>
   <p align="center">
-    <a href="#features">Features</a> · <a href="#quick-start">Quick Start</a> · <a href="#pipelines">Pipelines</a> · <a href="#configuration">Configuration</a>
+    <a href="#features">Features</a> 路 <a href="#quick-start">Quick Start</a> 路 <a href="#pipelines">Pipelines</a> 路 <a href="#configuration">Configuration</a>
   </p>
   <p align="center">
     <img src="https://img.shields.io/badge/Python-3.11+-blue?logo=python" alt="Python 3.11+">
@@ -18,24 +18,32 @@
   <img src="docs/architecture.svg" alt="Hermes Architecture" width="900">
 </p>
 
-## ✨ Features
+## 鉁?Features
 
-- **WebSocket Mode** — Direct connection to Feishu cloud, no public tunnel (no ngrok/cloudflared)
-- **Smart Routing** — GPT-4o-mini classifies intent in one API call, picks the optimal pipeline
-- **4 Pipeline Modes** — Full orchestration, fast implement, review-only, or smoke test
-- **Zero Python Dependencies** — Only stdlib (`http.server`, `json`, `hashlib`, etc.)
-- **MCP Support** — Codex executor can use Playwright, filesystem, fetch, GitHub tools
-- **Auto-Start** — Windows Startup folder + watchdog with crash recovery
-- **WSL2-First** — Designed for WSL2 with Windows cross-filesystem support
+## Portfolio Snapshot
 
-## 🚀 Quick Start
+Hermes is a mobile-first AI control plane for real coding workflows. It demonstrates multi-agent orchestration, LLM-based intent routing, Feishu WebSocket integration, and local-first automation for Codex CLI and Claude Code.
+
+- Portfolio angle: practical AI agent orchestration and workflow automation.
+- Core evidence: pipeline modes, WSL2-first design, Feishu bot control, config templates, architecture docs, and regression tests.
+- More details: [Case Study](docs/CASE_STUDY.md)
+
+- **WebSocket Mode** 鈥?Direct connection to Feishu cloud, no public tunnel (no ngrok/cloudflared)
+- **Smart Routing** 鈥?GPT-4o-mini classifies intent in one API call, picks the optimal pipeline
+- **4 Pipeline Modes** 鈥?Full orchestration, fast implement, review-only, or smoke test
+- **Zero Python Dependencies** 鈥?Only stdlib (`http.server`, `json`, `hashlib`, etc.)
+- **MCP Support** 鈥?Codex executor can use Playwright, filesystem, fetch, GitHub tools
+- **Auto-Start** 鈥?Windows Startup folder + watchdog with crash recovery
+- **WSL2-First** 鈥?Designed for WSL2 with Windows cross-filesystem support
+
+## 馃殌 Quick Start
 
 ### Prerequisites
 
 - **Python 3.11+** (no pip packages needed)
-- **OpenAI Codex CLI** — `npm install -g @openai/codex`
-- **Anthropic Claude Code** — `npm install -g @anthropic-ai/claude-code`
-- **Feishu App** — Create at [open.feishu.cn](https://open.feishu.cn)
+- **OpenAI Codex CLI** 鈥?`npm install -g @openai/codex`
+- **Anthropic Claude Code** 鈥?`npm install -g @anthropic-ai/claude-code`
+- **Feishu App** 鈥?Create at [open.feishu.cn](https://open.feishu.cn)
 - **WSL2** (Ubuntu recommended, but not required)
 
 ### 1. Install
@@ -84,14 +92,14 @@ run_cwd = "/mnt/c/Users/<YOUR_USERNAME>"
 hermes serve --config config/hermes.local.toml --port 8765 --mode websocket
 ```
 
-## 🔄 Pipelines
+## 馃攧 Pipelines
 
 ### Default Pipeline (Full Orchestration)
 
 For feature development and complex tasks:
 
 ```
-Claude (planner) → Codex (executor) → Claude (reviewer)
+Claude (planner) 鈫?Codex (executor) 鈫?Claude (reviewer)
 ```
 
 ### Fast Implement Pipeline
@@ -99,7 +107,7 @@ Claude (planner) → Codex (executor) → Claude (reviewer)
 For bug fixes and single-file changes:
 
 ```
-Codex (executor)  ← skip planning & review
+Codex (executor)  鈫?skip planning & review
 ```
 
 ### Review Only Pipeline
@@ -107,7 +115,7 @@ Codex (executor)  ← skip planning & review
 For code audits and reviews:
 
 ```
-Claude (reviewer)  ← read-only, no modifications
+Claude (reviewer)  鈫?read-only, no modifications
 ```
 
 ### Smoke Pipeline
@@ -115,10 +123,10 @@ Claude (reviewer)  ← read-only, no modifications
 Health check / connectivity test:
 
 ```
-Claude → Claude → Claude
+Claude 鈫?Claude 鈫?Claude
 ```
 
-## ⚙️ Configuration
+## 鈿欙笍 Configuration
 
 ### Environment Variables
 
@@ -130,9 +138,9 @@ Claude → Claude → Claude
 
 ### Feishu App Setup
 
-1. Go to [open.feishu.cn](https://open.feishu.cn) → Create App
+1. Go to [open.feishu.cn](https://open.feishu.cn) 鈫?Create App
 2. Enable **Bot** capability
-3. Enable **WebSocket** mode (Events → Message Received)
+3. Enable **WebSocket** mode (Events 鈫?Message Received)
 4. Add permissions: `im:message`, `im:message:send_as_bot`
 5. Copy `App ID` and `App Secret` into your config
 
@@ -154,7 +162,7 @@ command = "uvx"
 args = ["mcp-server-fetch"]
 ```
 
-## 🐕 Auto-Start (Windows)
+## 馃悤 Auto-Start (Windows)
 
 ### Startup Folder
 
@@ -177,51 +185,51 @@ The watchdog monitors Hermes every 30 seconds:
 - Rate limited: max 10 restarts per hour
 - Logs to `/tmp/hermes_watchdog.log`
 
-## 📁 Project Structure
+## 馃搧 Project Structure
 
 ```text
 hermes-control-plane/
-├── config/
-│   ├── hermes.local.example.toml    # Config template
-│   ├── feishu.example.toml          # Feishu config template
-│   ├── agents.example.toml          # Agent profiles
-│   └── routes.example.json          # Route rules
-├── docs/
-│   ├── architecture.svg             # Architecture diagram
-│   ├── ARCHITECTURE.md              # Architecture deep-dive
-│   ├── FEISHU.md                    # Feishu integration guide
-│   └── WSL2_FIRST.md               # WSL2 setup notes
-├── src/hermes_control_plane/
-│   ├── server.py                    # Feishu WebSocket + message handler
-│   ├── runner.py                    # Pipeline executor
-│   ├── router.py                    # Intent-based pipeline selector
-│   ├── contracts.py                 # Data classes (TaskSpec, etc.)
-│   └── feishu.py                    # Feishu API client
-├── examples/                        # Task templates
-└── tests/
+鈹溾攢鈹€ config/
+鈹?  鈹溾攢鈹€ hermes.local.example.toml    # Config template
+鈹?  鈹溾攢鈹€ feishu.example.toml          # Feishu config template
+鈹?  鈹溾攢鈹€ agents.example.toml          # Agent profiles
+鈹?  鈹斺攢鈹€ routes.example.json          # Route rules
+鈹溾攢鈹€ docs/
+鈹?  鈹溾攢鈹€ architecture.svg             # Architecture diagram
+鈹?  鈹溾攢鈹€ ARCHITECTURE.md              # Architecture deep-dive
+鈹?  鈹溾攢鈹€ FEISHU.md                    # Feishu integration guide
+鈹?  鈹斺攢鈹€ WSL2_FIRST.md               # WSL2 setup notes
+鈹溾攢鈹€ src/hermes_control_plane/
+鈹?  鈹溾攢鈹€ server.py                    # Feishu WebSocket + message handler
+鈹?  鈹溾攢鈹€ runner.py                    # Pipeline executor
+鈹?  鈹溾攢鈹€ router.py                    # Intent-based pipeline selector
+鈹?  鈹溾攢鈹€ contracts.py                 # Data classes (TaskSpec, etc.)
+鈹?  鈹斺攢鈹€ feishu.py                    # Feishu API client
+鈹溾攢鈹€ examples/                        # Task templates
+鈹斺攢鈹€ tests/
 ```
 
-## 🤔 How It Works
+## 馃 How It Works
 
-1. **User sends a message** in Feishu → WebSocket delivers to Hermes
+1. **User sends a message** in Feishu 鈫?WebSocket delivers to Hermes
 2. **LLM Classifier** (GPT-4o-mini) analyzes in one API call:
    - `msg_type`: `chat` (quick Q&A) or `task` (needs agent execution)
    - `intent`: `implement`, `fix`, `review`, `audit`, `research`, `verify`
 3. **Router** picks pipeline based on intent:
-   - `fix` / small `implement` → `fast_implement` (Codex only)
-   - `review` / `audit` → `review_only` (Claude only)
-   - large `implement` → `default` (full pipeline)
+   - `fix` / small `implement` 鈫?`fast_implement` (Codex only)
+   - `review` / `audit` 鈫?`review_only` (Claude only)
+   - large `implement` 鈫?`default` (full pipeline)
 4. **Runner** executes pipeline stages sequentially
 5. **Results** sent back to Feishu
 
-## 🤝 Contributing
+## 馃 Contributing
 
 PRs welcome! Especially:
 
-- **New pipelines** — define your own in `config/`
-- **New integrations** — Slack, Discord, WeChat, etc.
-- **Classifier improvements** — better intent recognition
+- **New pipelines** 鈥?define your own in `config/`
+- **New integrations** 鈥?Slack, Discord, WeChat, etc.
+- **Classifier improvements** 鈥?better intent recognition
 
-## 📄 License
+## 馃搫 License
 
-MIT © [benben951](https://github.com/benben951)
+MIT 漏 [benben951](https://github.com/benben951)
