@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "default_pipeline": "standard_change",
+  "default_pipeline": "default",
   "pipelines": {
     "fast_implement": {
       "stages": ["executor"],
@@ -8,7 +8,7 @@
         "executor": "codex"
       }
     },
-    "standard_change": {
+    "default": {
       "stages": ["planner", "executor", "reviewer"],
       "agents": {
         "planner": "claude",

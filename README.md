@@ -4,11 +4,12 @@ Route real coding tasks across Codex CLI and Claude Code through a Feishu bot.
 
 ## Portfolio Snapshot
 
-Hermes is a mobile-first AI control plane for practical software workflows. It demonstrates multi-agent orchestration, LLM-based intent routing, Feishu WebSocket integration, and local-first automation for coding tasks that need more than a single chat window.
+Hermes is a mobile-first AI control plane for practical software workflows. It demonstrates multi-agent orchestration, intent-based routing, Feishu WebSocket integration, and local-first automation for coding tasks that need more than a single chat window.
 
 - Portfolio angle: multi-agent workflow systems and operator-facing AI tooling
-- Core evidence: explicit pipeline modes, WSL2-first execution, Feishu control surface, config templates, architecture docs, and tests
+- Core evidence: explicit pipeline modes, WSL2-first execution, Feishu control surface, config templates, architecture docs, route tests, and run artifacts
 - Case study: [docs/CASE_STUDY.md](docs/CASE_STUDY.md)
+- Routing policy: [docs/ROUTING_POLICY.md](docs/ROUTING_POLICY.md)
 
 ## Why It Matters
 
@@ -20,6 +21,16 @@ Most agent demos stop at "one model, one task, one terminal." Real team workflow
 - some need human approval checkpoints and external messaging
 
 Hermes is a control plane for that layer.
+
+## What To Notice
+
+This repository is meant to show more than a chatbot wrapper:
+
+- `src/hermes_control_plane/router.py` separates routing policy from execution.
+- `src/hermes_control_plane/runner.py` writes per-stage artifacts and run summaries.
+- `src/hermes_control_plane/server.py` supports Feishu intake, including WebSocket mode to avoid public tunnels.
+- `config/hermes.local.example.toml` documents local profiles for Windows, WSL2, and mixed execution.
+- `tests/test_router.py` gives the routing layer regression coverage, including Chinese mobile instructions.
 
 ## What Hermes Does
 
@@ -62,6 +73,7 @@ Use for health checks, environment checks, and end-to-end pipeline verification.
 - Feishu WebSocket integration
 - WSL2-aware path and process handling
 - MCP-friendly Codex execution model
+- deterministic routing tests for review, fix, small implementation, and default flows
 
 ## Quick Start
 
@@ -78,6 +90,12 @@ Then configure your Feishu app credentials and local agent commands before runni
 hermes serve --config config/hermes.local.toml --port 8765 --mode websocket
 ```
 
+## Verify Locally
+
+```bash
+python -m pytest -q
+```
+
 ## Project Structure
 
 ```text
@@ -91,3 +109,10 @@ tests/                       regression coverage
 ## Resume Angle
 
 Built a mobile-first multi-agent control plane that routes real coding tasks across Codex CLI and Claude Code through Feishu, with intent-based pipeline selection, WSL2-first local execution, and operator-friendly workflow control.
+
+## Interview Talking Points
+
+- Why routing matters: real AI coding work needs different workflows for implementation, review, status checks, and small fixes.
+- Why local-first: mobile control is useful, but credentials and local repositories should not require a public tunnel by default.
+- Why artifacts matter: planner, executor, and reviewer stages need structured outputs so failures can be replayed and audited.
+- What I would improve next: add route confidence, approval gates for destructive tasks, artifact schema validation, and run-level metrics.
