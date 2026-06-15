@@ -27,6 +27,22 @@ class ConversationContextTests(unittest.TestCase):
 
         self.assertEqual(session.max_age, conversation.DEFAULT_MAX_AGE_SECONDS)
 
+    def test_get_store_preserves_configured_conversation_limits(self) -> None:
+        configured = conversation.configure_store(
+            max_sessions=2,
+            default_max_turns=3,
+            default_max_age=60,
+        )
+        configured.add_message("session-1", "user", "one")
+        configured.add_message("session-1", "assistant", "two")
+
+        store = conversation.get_store()
+        session = store.get_or_create("session-1")
+
+        self.assertIs(store, configured)
+        self.assertEqual(session.max_turns, 3)
+        self.assertEqual(session.max_age, 60)
+
     def test_pipeline_result_is_saved_back_to_conversation(self) -> None:
         store = conversation.get_store()
         task = {"goal": "为什么，你自己修复一下"}
