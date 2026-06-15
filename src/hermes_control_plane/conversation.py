@@ -190,16 +190,16 @@ _store: ConversationStore | None = None
 
 def configure_store(
     *,
-    max_sessions: int = DEFAULT_MAX_SESSIONS,
-    default_max_turns: int = DEFAULT_MAX_TURNS,
-    default_max_age: float = DEFAULT_MAX_AGE_SECONDS,
+    max_sessions: int | None = None,
+    default_max_turns: int | None = None,
+    default_max_age: float | None = None,
 ) -> ConversationStore:
     global _store
     if _store is None:
         _store = ConversationStore(
-            max_sessions=max_sessions,
-            default_max_turns=default_max_turns,
-            default_max_age=default_max_age,
+            max_sessions=max_sessions if max_sessions is not None else DEFAULT_MAX_SESSIONS,
+            default_max_turns=default_max_turns if default_max_turns is not None else DEFAULT_MAX_TURNS,
+            default_max_age=default_max_age if default_max_age is not None else DEFAULT_MAX_AGE_SECONDS,
         )
     else:
         _store.reconfigure(
